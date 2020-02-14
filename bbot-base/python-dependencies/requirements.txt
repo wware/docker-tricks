@@ -2,7 +2,7 @@ astroid==1.2.1
 beautifulsoup4==4.6.3
 boto3==1.11.16
 botocore==1.14.16
-buildbot==0.8.9
+buildbot==1.8.2
 buildbot-slave==0.8.9
 cloud==2.8.5
 decorator==3.4.0
