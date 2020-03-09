@@ -1,0 +1,25 @@
+---
+loadbal:
+    image: "load_balancer:latest"
+    mounts:
+        /work: work
+    ports:
+        80: 8080
+web1:
+    image: "web_server:latest"
+    mounts:
+        /work: work
+    ports:
+        80: 8081
+web2:
+    image: "web_server:latest"
+    mounts:
+        /work: work
+    ports:
+        80: 8082
+db:
+    image: "database:latest"
+    mounts:
+        /work: work
+    ports:
+        3306: 3307
