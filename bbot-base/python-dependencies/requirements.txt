@@ -17,7 +17,7 @@ jmespath==0.9.4
 jsonschema==2.4.0
 lockfile==0.10.2
 logilab-common==0.63.0
-lxml==3.4.0
+lxml==4.6.3
 MarkupSafe==0.23
 mock==1.0.1
 MySQL-python==1.2.5
