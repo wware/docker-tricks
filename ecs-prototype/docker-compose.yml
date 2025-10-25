@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # LocalStack - AWS service emulation
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack
+    ports:
+      - "4566:4566"            # LocalStack gateway
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=ecs,ec2,ecr,elbv2,ssm,secretsmanager,logs,iam,sts
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LOCALSTACK_HOST=localstack
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./localstack-init:/etc/localstack/init/ready.d"
+      - "localstack-data:/tmp/localstack"
+    networks:
+      - ecs-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Sample Application - This represents your ECS service
+  sample-app:
+    build: ./sample-app
+    container_name: sample-app
+    ports:
+      - "8080:8080"
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - LOCALSTACK_HOSTNAME=localstack
+    depends_on:
+      localstack:
+        condition: service_healthy
+    networks:
+      - ecs-network
+
+  # Jenkins - For testing deploy pipelines
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jenkins/pipelines:/var/jenkins_home/pipelines
+    networks:
+      - ecs-network
+    depends_on:
+      - localstack
+
+  # AWS CLI container for manual testing
+  aws-cli:
+    image: amazon/aws-cli:latest
+    container_name: aws-cli
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_ENDPOINT_URL=http://localstack:4566
+    entrypoint: ["/bin/sh", "-c", "sleep infinity"]
+    depends_on:
+      - localstack
+    networks:
+      - ecs-network
+
+networks:
+  ecs-network:
+    driver: bridge
+
+volumes:
+  localstack-data:
+  jenkins-data:
