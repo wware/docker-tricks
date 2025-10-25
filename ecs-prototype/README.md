@@ -183,6 +183,7 @@ Customize this for your specific deployment process.
 ```
 ecs-prototype/
 ├── docker-compose.yml              # Main orchestration file
+├── docker-compose.simple.yml       # Simplified version (no health checks)
 ├── README.md                       # This file
 ├── sample-app/                     # Sample application
 │   ├── Dockerfile
@@ -197,6 +198,8 @@ ecs-prototype/
     ├── start.sh                    # Start environment
     ├── stop.sh                     # Stop environment
     ├── logs.sh                     # View logs
+    ├── test.sh                     # Test environment
+    ├── shell.sh                    # Open shell in container
     └── reset.sh                    # Reset environment
 ```
 
@@ -241,6 +244,32 @@ docker-compose up -d
 
 ## Troubleshooting
 
+### Container Health Check Failures
+
+If you see errors like "Container is unhealthy" when running `docker-compose up`:
+
+```bash
+# Check which container is unhealthy
+docker-compose ps
+
+# View detailed logs for the unhealthy container
+docker-compose logs localstack
+docker-compose logs sample-app
+
+# Try the simplified compose file without strict health checks
+docker-compose -f docker-compose.simple.yml up -d
+
+# Or start services individually
+docker-compose up -d localstack
+# Wait 30-60 seconds for LocalStack to fully start
+docker-compose up -d sample-app jenkins aws-cli
+```
+
+**Common causes:**
+- LocalStack takes longer than expected to start (needs 30-60 seconds)
+- Docker resources are constrained (needs 4GB+ RAM)
+- Port 4566 is already in use
+
 ### LocalStack Not Starting
 
 ```bash
@@ -251,6 +280,9 @@ docker-compose logs localstack
 lsof -i :4566
 
 # Increase Docker resources (needs 4GB+ RAM)
+
+# Check if LocalStack is actually responding (even if marked unhealthy)
+curl http://localhost:4566/_localstack/health
 ```
 
 ### Sample App Can't Connect to LocalStack

@@ -1,13 +1,16 @@
 version: '3.8'
 
+# Simplified version without strict health check dependencies
+# Use this if you're having issues with the main docker-compose.yml
+
 services:
   # LocalStack - AWS service emulation
   localstack:
     image: localstack/localstack:latest
     container_name: localstack
     ports:
-      - "4566:4566"            # LocalStack gateway
-      - "4510-4559:4510-4559"  # External services port range
+      - "4566:4566"
+      - "4510-4559:4510-4559"
     environment:
       - SERVICES=ecs,ec2,ecr,elbv2,ssm,secretsmanager,logs,iam,sts
       - DEBUG=1
@@ -20,14 +23,8 @@ services:
       - "localstack-data:/tmp/localstack"
     networks:
       - ecs-network
-    healthcheck:
-      test: ["CMD", "bash", "-c", "curl -f http://localhost:4566/_localstack/health || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
 
-  # Sample Application - This represents your ECS service
+  # Sample Application - starts regardless of LocalStack health
   sample-app:
     build: ./sample-app
     container_name: sample-app
@@ -39,11 +36,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_ENDPOINT_URL=http://localstack:4566
       - LOCALSTACK_HOSTNAME=localstack
-    depends_on:
-      localstack:
-        condition: service_healthy
     networks:
       - ecs-network
+    restart: on-failure
 
   # Jenkins - For testing deploy pipelines
   jenkins:
@@ -60,8 +55,6 @@ services:
       - ./jenkins/pipelines:/var/jenkins_home/pipelines
     networks:
       - ecs-network
-    depends_on:
-      - localstack
 
   # AWS CLI container for manual testing
   aws-cli:
@@ -73,8 +66,6 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_ENDPOINT_URL=http://localstack:4566
     entrypoint: ["/bin/sh", "-c", "sleep infinity"]
-    depends_on:
-      - localstack
     networks:
       - ecs-network
 
