@@ -1,0 +1,76 @@
+#!/usr/bin/python
+
+import argparse
+import os
+import sys
+import yaml
+import pprint
+import logging
+from textwrap import dedent
+
+IDFILENAME = os.path.join(os.path.realpath("."), ".container_ids.yaml")
+
+
+def start_container(image, ports, mounts, name=None):
+    cmd = ["docker", "run", "-d", "-it", "--rm"]
+    for container, host in ports.items():
+        assert isinstance(container, int), container
+        assert isinstance(host, int), host
+        cmd.extend(["-p", "127.0.0.1:{0}:{1}".format(host, container)])
+    for container, host in mounts.items():
+        assert isinstance(container, str), container
+        assert isinstance(host, str), host
+        cmd.extend(["-v", "{0}:{1}".format(host, container)])
+    if name is not None:
+        assert isinstance(name, str), name
+        cmd.extend(["--name", name])
+    cmd.append(image)
+    cmd = " ".join(cmd)
+    logging.debug(cmd)
+    return os.popen(cmd).read().rstrip()
+
+
+def main():
+    prog = os.path.basename(__file__)
+    stopping = 'stop' in prog
+    parser = argparse.ArgumentParser(
+        prog=prog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=dedent(r'''This program does blah blah blah.''')
+    )
+    parser.add_argument('-y', '--yaml',
+        help='A YAML specification of what Docker containers to run',
+        required=True
+    )
+    parser.add_argument('-d', '--debug',
+        action='store_true',
+        help='turn on debugging output',
+    )
+    options, extras = parser.parse_known_args()
+    logging.basicConfig(stream=sys.stdout,
+                        level=logging.DEBUG if options.debug else logging.INFO)
+    assert os.path.isfile(options.yaml)
+    Y = yaml.safe_load(open(options.yaml))
+    logging.debug(pprint.pformat(Y))
+    if stopping:
+        d = yaml.safe_load(open(IDFILENAME))
+        for k, v in d.items():
+            os.system("docker rm -f {0}".format(v))
+        os.system("rm -f " + IDFILENAME)
+    else:
+        idfile = open(IDFILENAME, 'w')
+        d = {}
+        for k, v in Y.items():
+            # image = v['image']
+            image = "ubuntu:latest"
+            cid = start_container(image, v['ports'], v['mounts'], k)
+            d[k] = cid
+        idfile.write(yaml.dump(d, indent=4, default_flow_style=False))
+        idfile.close()
+    # print stopping
+    # print options
+    # print extras
+
+
+if __name__ == '__main__':
+    main()
