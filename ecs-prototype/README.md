@@ -58,10 +58,12 @@ docker-compose up -d
 ```
 
 This will:
-- Start LocalStack with AWS service emulation
-- Initialize ECS cluster, ALB, Parameter Store, and Secrets Manager
+- Start LocalStack with AWS service emulation (takes 30-60 seconds)
+- Auto-initialize ECS cluster, ALB, Parameter Store, and Secrets Manager
 - Start the sample application
 - Start Jenkins (optional)
+
+**Note:** LocalStack data is NOT persisted. Each time you restart, the initialization script automatically recreates all AWS resources. This is perfect for prototyping!
 
 ### 2. Verify Services are Running
 
@@ -223,12 +225,14 @@ docker-compose logs -f sample-app
 ### Reset the Environment
 
 ```bash
-# Stop and remove all containers and volumes
-docker-compose down -v
+# Stop and remove all containers
+docker-compose down
 
-# Start fresh
+# Start fresh (LocalStack will auto-initialize)
 docker-compose up -d
 ```
+
+**Note:** Since LocalStack doesn't persist data, every restart is automatically a "fresh" environment with newly created AWS resources.
 
 ### Update Resources
 
@@ -239,37 +243,32 @@ After modifying `localstack-init/01-setup-resources.sh`:
 docker-compose restart localstack
 
 # Or do a full reset
-docker-compose down -v
+docker-compose down
 docker-compose up -d
 ```
 
 ## Troubleshooting
 
-### LocalStack "Device or resource busy" Error
+### LocalStack Startup Issues
 
-If you see this error in LocalStack logs:
-```
-ERROR: 'rm -rf "/tmp/localstack"': exit code 1; output: Device or resource busy
-```
-
-This means there are old volumes or containers interfering. **Use the cleanup script:**
+If LocalStack fails to start or you see errors:
 
 ```bash
-# Run the comprehensive cleanup script
+# Complete cleanup
 ./scripts/cleanup.sh
 
-# Then pull latest changes and start fresh
-git pull
-docker-compose build --no-cache
+# Start fresh
 docker-compose up -d
+
+# Watch logs to see it initialize
+docker-compose logs -f localstack
 ```
 
-**What the cleanup script does:**
-- Stops all containers
-- Removes all volumes (localstack-data, jenkins-data)
-- Removes networks
-- Prunes dangling volumes
-- Removes any orphaned mounts
+**What happens on startup:**
+- LocalStack starts (30-60 seconds)
+- Initialization script automatically runs
+- Creates VPC, ECS cluster, ALB, parameters, secrets
+- You'll see "LocalStack resources setup complete!" when ready
 
 ### Container Health Check Failures
 

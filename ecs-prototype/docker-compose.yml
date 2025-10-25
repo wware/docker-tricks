@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   # LocalStack - AWS service emulation
+  # Note: Data is NOT persisted - resources recreated on each startup
   localstack:
     image: localstack/localstack:latest
     container_name: localstack
@@ -13,12 +14,9 @@ services:
       - DEBUG=1
       - DOCKER_HOST=unix:///var/run/docker.sock
       - LOCALSTACK_HOST=localstack
-      - LOCALSTACK_VOLUME_DIR=/var/lib/localstack
-      - TMPDIR=/var/lib/localstack/tmp
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./localstack-init:/etc/localstack/init/ready.d"
-      - "localstack-data:/var/lib/localstack"
     networks:
       - ecs-network
     healthcheck:
@@ -84,5 +82,4 @@ networks:
     driver: bridge
 
 volumes:
-  localstack-data:
   jenkins-data:

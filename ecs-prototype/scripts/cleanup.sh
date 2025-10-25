@@ -22,7 +22,6 @@ docker rm -f localstack sample-app jenkins aws-cli 2>/dev/null || true
 
 echo ""
 echo "Step 3: Removing volumes..."
-docker volume rm ecs-prototype_localstack-data 2>/dev/null || true
 docker volume rm ecs-prototype_jenkins-data 2>/dev/null || true
 
 echo ""
