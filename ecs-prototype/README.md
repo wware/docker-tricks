@@ -17,9 +17,9 @@ This setup allows you to prototype and test ECS deployments locally before pushi
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Docker Network                          │
-│                                                             │
+┌───────────────────────────────────────────────────────────┐
+│                     Docker Network                        │
+│                                                           │
 │  ┌──────────────┐       ┌──────────────┐                  │
 │  │              │       │              │                  │
 │  │  LocalStack  │◄──────│  Sample App  │                  │
@@ -30,7 +30,7 @@ This setup allows you to prototype and test ECS deployments locally before pushi
 │  │    Store     │       │              │                  │
 │  │  - Secrets   │       │              │                  │
 │  │    Manager   │       └──────────────┘                  │
-│  │  - ECR       │                                          │
+│  │  - ECR       │                                         │
 │  │  - IAM       │       ┌──────────────┐                  │
 │  └──────────────┘       │              │                  │
 │         ▲               │   Jenkins    │                  │
@@ -39,7 +39,7 @@ This setup allows you to prototype and test ECS deployments locally before pushi
 │         └───────────────┤  - Deploy    │                  │
 │                         │    Scripts   │                  │
 │                         └──────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
+└───────────────────────────────────────────────────────────┘
 ```
 
 ## Prerequisites
