@@ -200,7 +200,8 @@ ecs-prototype/
     ├── logs.sh                     # View logs
     ├── test.sh                     # Test environment
     ├── shell.sh                    # Open shell in container
-    └── reset.sh                    # Reset environment
+    ├── reset.sh                    # Reset environment
+    └── cleanup.sh                  # Complete cleanup (volumes, containers)
 ```
 
 ## Common Operations
@@ -243,6 +244,32 @@ docker-compose up -d
 ```
 
 ## Troubleshooting
+
+### LocalStack "Device or resource busy" Error
+
+If you see this error in LocalStack logs:
+```
+ERROR: 'rm -rf "/tmp/localstack"': exit code 1; output: Device or resource busy
+```
+
+This means there are old volumes or containers interfering. **Use the cleanup script:**
+
+```bash
+# Run the comprehensive cleanup script
+./scripts/cleanup.sh
+
+# Then pull latest changes and start fresh
+git pull
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+**What the cleanup script does:**
+- Stops all containers
+- Removes all volumes (localstack-data, jenkins-data)
+- Removes networks
+- Prunes dangling volumes
+- Removes any orphaned mounts
 
 ### Container Health Check Failures
 
