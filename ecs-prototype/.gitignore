@@ -1,0 +1,38 @@
+# Docker volumes and runtime data
+localstack-data/
+jenkins-data/
+
+# LocalStack temporary files
+.localstack/
+
+# Docker Compose override files
+docker-compose.override.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+.tmp/

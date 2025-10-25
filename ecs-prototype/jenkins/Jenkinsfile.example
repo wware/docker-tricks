@@ -1,0 +1,184 @@
+// Example Jenkins Pipeline for ECS Deployment
+// This demonstrates how to deploy a container to ECS using LocalStack
+
+pipeline {
+    agent any
+
+    environment {
+        AWS_DEFAULT_REGION = 'us-east-1'
+        AWS_ACCESS_KEY_ID = 'test'
+        AWS_SECRET_ACCESS_KEY = 'test'
+        AWS_ENDPOINT_URL = 'http://localstack:4566'
+
+        ECS_CLUSTER = 'sample-app-cluster'
+        ECS_SERVICE = 'sample-app-service'
+        TASK_FAMILY = 'sample-app-task'
+        IMAGE_NAME = 'sample-app'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out code...'
+                // In real Jenkins, this would be:
+                // checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo "Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh """
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ./sample-app
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                    """
+                }
+            }
+        }
+
+        stage('Push to ECR (LocalStack)') {
+            steps {
+                script {
+                    echo 'Pushing image to LocalStack ECR...'
+                    sh """
+                        # Create ECR repository if it doesn't exist
+                        aws --endpoint-url=${AWS_ENDPOINT_URL} ecr create-repository \
+                            --repository-name ${IMAGE_NAME} \
+                            --region ${AWS_DEFAULT_REGION} || true
+
+                        # Tag and push image
+                        ECR_URL=\$(aws --endpoint-url=${AWS_ENDPOINT_URL} ecr describe-repositories \
+                            --repository-names ${IMAGE_NAME} \
+                            --region ${AWS_DEFAULT_REGION} \
+                            --query 'repositories[0].repositoryUri' \
+                            --output text)
+
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} \${ECR_URL}:${IMAGE_TAG}
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} \${ECR_URL}:latest
+
+                        # In real AWS, you'd need to login to ECR first:
+                        # aws ecr get-login-password | docker login --username AWS --password-stdin \${ECR_URL}
+
+                        echo "Image ready: \${ECR_URL}:${IMAGE_TAG}"
+                    """
+                }
+            }
+        }
+
+        stage('Update ECS Task Definition') {
+            steps {
+                script {
+                    echo 'Updating ECS task definition...'
+                    sh """
+                        # Register new task definition
+                        aws --endpoint-url=${AWS_ENDPOINT_URL} ecs register-task-definition \
+                            --family ${TASK_FAMILY} \
+                            --network-mode awsvpc \
+                            --requires-compatibilities FARGATE \
+                            --cpu 256 \
+                            --memory 512 \
+                            --execution-role-arn arn:aws:iam::000000000000:role/ecsTaskExecutionRole \
+                            --container-definitions '[
+                                {
+                                    "name": "sample-app",
+                                    "image": "${IMAGE_NAME}:${IMAGE_TAG}",
+                                    "portMappings": [
+                                        {
+                                            "containerPort": 8080,
+                                            "protocol": "tcp"
+                                        }
+                                    ],
+                                    "environment": [
+                                        {
+                                            "name": "AWS_DEFAULT_REGION",
+                                            "value": "${AWS_DEFAULT_REGION}"
+                                        },
+                                        {
+                                            "name": "AWS_ENDPOINT_URL",
+                                            "value": "${AWS_ENDPOINT_URL}"
+                                        }
+                                    ],
+                                    "secrets": [
+                                        {
+                                            "name": "DB_PASSWORD",
+                                            "valueFrom": "arn:aws:secretsmanager:${AWS_DEFAULT_REGION}:000000000000:secret:myapp/database/password"
+                                        }
+                                    ],
+                                    "logConfiguration": {
+                                        "logDriver": "awslogs",
+                                        "options": {
+                                            "awslogs-group": "/ecs/sample-app",
+                                            "awslogs-region": "${AWS_DEFAULT_REGION}",
+                                            "awslogs-stream-prefix": "ecs"
+                                        }
+                                    }
+                                }
+                            ]' \
+                            --region ${AWS_DEFAULT_REGION}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to ECS') {
+            steps {
+                script {
+                    echo 'Deploying to ECS...'
+                    sh """
+                        # Update ECS service with new task definition
+                        aws --endpoint-url=${AWS_ENDPOINT_URL} ecs update-service \
+                            --cluster ${ECS_CLUSTER} \
+                            --service ${ECS_SERVICE} \
+                            --task-definition ${TASK_FAMILY} \
+                            --force-new-deployment \
+                            --region ${AWS_DEFAULT_REGION} || \
+                        # If service doesn't exist, create it
+                        aws --endpoint-url=${AWS_ENDPOINT_URL} ecs create-service \
+                            --cluster ${ECS_CLUSTER} \
+                            --service-name ${ECS_SERVICE} \
+                            --task-definition ${TASK_FAMILY} \
+                            --desired-count 1 \
+                            --launch-type FARGATE \
+                            --region ${AWS_DEFAULT_REGION}
+                    """
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo 'Verifying deployment...'
+                    sh """
+                        # Wait for service to stabilize
+                        echo "Waiting for ECS service to stabilize..."
+                        sleep 10
+
+                        # Check service status
+                        aws --endpoint-url=${AWS_ENDPOINT_URL} ecs describe-services \
+                            --cluster ${ECS_CLUSTER} \
+                            --services ${ECS_SERVICE} \
+                            --region ${AWS_DEFAULT_REGION}
+
+                        # List running tasks
+                        aws --endpoint-url=${AWS_ENDPOINT_URL} ecs list-tasks \
+                            --cluster ${ECS_CLUSTER} \
+                            --service-name ${ECS_SERVICE} \
+                            --region ${AWS_DEFAULT_REGION}
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment successful!'
+        }
+        failure {
+            echo 'Deployment failed!'
+        }
+    }
+}
