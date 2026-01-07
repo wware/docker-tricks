@@ -38,7 +38,7 @@ six==1.13.0
 SQLAlchemy==1.2.19
 sqlalchemy-migrate==0.7.2
 Tempita==0.5.2
-Twisted==22.10.0
+Twisted==24.7.0rc1
 urllib3==2.6.0
 Werkzeug==0.15.5
 wsgiref==0.1.2
