@@ -39,7 +39,7 @@ SQLAlchemy==0.7.10
 sqlalchemy-migrate==0.7.2
 Tempita==0.5.2
 Twisted==22.10.0
-urllib3==1.26.5
+urllib3==2.6.0
 Werkzeug==3.1.4
 wsgiref==0.1.2
 zope.interface==4.1.1
